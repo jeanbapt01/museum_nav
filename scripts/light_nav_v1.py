@@ -33,7 +33,7 @@ TOUR_ORDER = ["HOME", "SHARK", "WHALE", "DOLPHIN", "SEASNAIL",
 DESCRIPTIONS = {
     "SHARK": """
 ╔══════════════════════════════════════════════════════════╗
-║                        🦈  SHARK                        ║
+║                         🦈  SHARK                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — fish, seals, cephalopods              ║
 ║                                                          ║
@@ -46,7 +46,7 @@ DESCRIPTIONS = {
 """,
     "WHALE": """
 ╔══════════════════════════════════════════════════════════╗
-║                        🐋  WHALE                        ║
+║                         🐋  WHALE                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Krill and small fish (filter feeding)             ║
 ║                                                          ║
@@ -58,7 +58,7 @@ DESCRIPTIONS = {
 """,
     "DOLPHIN": """
 ╔══════════════════════════════════════════════════════════╗
-║                      🐬  DOLPHIN                        ║
+║                       🐬  DOLPHIN                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — fish, squid, hunts in groups          ║
 ║                                                          ║
@@ -71,7 +71,7 @@ DESCRIPTIONS = {
 """,
     "SEASNAIL": """
 ╔══════════════════════════════════════════════════════════╗
-║                    🐚  SEA SNAIL                        ║
+║                     🐚  SEA SNAIL                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Herbivore or carnivore depending on species       ║
 ║        — algae, molluscs, small invertebrates            ║
@@ -86,7 +86,7 @@ DESCRIPTIONS = {
 """,
     "TURTLE": """
 ╔══════════════════════════════════════════════════════════╗
-║                    🐢  SEA TURTLE                       ║
+║                     🐢  SEA TURTLE                       ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Omnivore — jellyfish, seagrass, crustaceans       ║
 ║                                                          ║
@@ -99,7 +99,7 @@ DESCRIPTIONS = {
 """,
     "OCTOPUS": """
 ╔══════════════════════════════════════════════════════════╗
-║                      🐙  OCTOPUS                        ║
+║                       🐙  OCTOPUS                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — crabs, molluscs, small fish           ║
 ║                                                          ║
@@ -112,7 +112,7 @@ DESCRIPTIONS = {
 """,
     "SHRIMP": """
 ╔══════════════════════════════════════════════════════════╗
-║                      🦐  SHRIMP                         ║
+║                       🦐  SHRIMP                         ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Omnivore — algae, plankton, organic debris        ║
 ║                                                          ║
@@ -126,7 +126,7 @@ DESCRIPTIONS = {
 """,
     "TUNA": """
 ╔══════════════════════════════════════════════════════════╗
-║                        🐟  TUNA                         ║
+║                         🐟  TUNA                         ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — fish, squid, crustaceans              ║
 ║                                                          ║
@@ -142,9 +142,9 @@ DESCRIPTIONS = {
 WELCOME_MSG = """
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║        🐠  Welcome to the Marine Wildlife Museum  🐠    ║
+║        🐠  Welcome to the Marine Wildlife Museum  🐠     ║
 ║                                                          ║
-║   I am your guide robot. Here is what you can ask me:   ║
+║   I am your guide robot. Here is what you can ask me:    ║
 ║                                                          ║
 ║   • Say a destination to navigate there:                 ║
 ║     SHARK, WHALE, DOLPHIN, CORAL, TURTLE,                ║
