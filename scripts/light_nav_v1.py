@@ -19,7 +19,7 @@ ANGULAR_SPEED = 0.5    # rad/s
 CMD_TIMEOUT   = 8.0    # seconds before teleop auto-stop
 FOLLOW_WAIT   = 10.0   # seconds to display each animal description
 
-POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/points.yaml")
+POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/pointsv1.yaml")
 GRAMMAR_FILE = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.gram")
 DICT_FILE    = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.dict")
 
