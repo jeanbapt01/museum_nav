@@ -14,26 +14,22 @@ from pocketsphinx import LiveSpeech
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-LINEAR_SPEED  = 0.15   # m/s
-ANGULAR_SPEED = 0.5    # rad/s
-CMD_TIMEOUT   = 8.0    # seconds before teleop auto-stop
-FOLLOW_WAIT   = 10.0   # seconds to display each animal description
+LINEAR_SPEED   = 0.15   # m/s
+ANGULAR_SPEED  = 0.5    # rad/s
+CMD_TIMEOUT    = 8.0    # seconds before teleop auto-stop
+CONFIDENCE_THR = -3000  # log-prob threshold — ignore recognition below this
 
-POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/pointsv1.yaml")
+POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/points.yaml")
 GRAMMAR_FILE = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.gram")
 DICT_FILE    = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.dict")
 
-# Tour order for FOLLOW command
-TOUR_ORDER = ["HOME", "SHARK", "WHALE", "DOLPHIN", "SEASNAIL",
-              "TURTLE", "OCTOPUS", "SHRIMP", "TUNA", "HOME"]
-
 # ---------------------------------------------------------------------------
-# ANIMAL DESCRIPTIONS
+# DESCRIPTIONS
 # ---------------------------------------------------------------------------
 DESCRIPTIONS = {
     "SHARK": """
 ╔══════════════════════════════════════════════════════════╗
-║                         🦈  SHARK                        ║
+║                        🦈  SHARK                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — fish, seals, cephalopods              ║
 ║                                                          ║
@@ -44,49 +40,9 @@ DESCRIPTIONS = {
 ║  • Can detect one drop of blood in 100 litres of water   ║
 ╚══════════════════════════════════════════════════════════╝
 """,
-    "WHALE": """
-╔══════════════════════════════════════════════════════════╗
-║                         🐋  WHALE                        ║
-╠══════════════════════════════════════════════════════════╣
-║  Diet: Krill and small fish (filter feeding)             ║
-║                                                          ║
-║  Special abilities:                                      ║
-║  • Produces complex songs that travel thousands of km    ║
-║  • Blue whale: loudest animal on Earth (180 decibels)    ║
-║  • Can hold breath for up to 90 minutes                  ║
-╚══════════════════════════════════════════════════════════╝
-""",
-    "DOLPHIN": """
-╔══════════════════════════════════════════════════════════╗
-║                       🐬  DOLPHIN                        ║
-╠══════════════════════════════════════════════════════════╣
-║  Diet: Carnivore — fish, squid, hunts in groups          ║
-║                                                          ║
-║  Special abilities:                                      ║
-║  • Echolocation: locates prey using sound waves          ║
-║  • One of the few animals able to recognise itself       ║
-║    in a mirror (self-awareness)                          ║
-║  • Sleeps with one brain hemisphere at a time            ║
-╚══════════════════════════════════════════════════════════╝
-""",
-    "SEASNAIL": """
-╔══════════════════════════════════════════════════════════╗
-║                     🐚  SEA SNAIL                        ║
-╠══════════════════════════════════════════════════════════╣
-║  Diet: Herbivore or carnivore depending on species       ║
-║        — algae, molluscs, small invertebrates            ║
-║                                                          ║
-║  Special abilities:                                      ║
-║  • Shell grows in a perfect logarithmic spiral           ║
-║  • Cone snails can fire a venomous harpoon-like tooth    ║
-║    capable of killing a human                            ║
-║  • Some species can seal their shell opening with        ║
-║    an operculum to survive out of water                  ║
-╚══════════════════════════════════════════════════════════╝
-""",
     "TURTLE": """
 ╔══════════════════════════════════════════════════════════╗
-║                     🐢  SEA TURTLE                       ║
+║                    🐢  SEA TURTLE                       ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Omnivore — jellyfish, seagrass, crustaceans       ║
 ║                                                          ║
@@ -99,7 +55,7 @@ DESCRIPTIONS = {
 """,
     "OCTOPUS": """
 ╔══════════════════════════════════════════════════════════╗
-║                       🐙  OCTOPUS                        ║
+║                      🐙  OCTOPUS                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — crabs, molluscs, small fish           ║
 ║                                                          ║
@@ -110,49 +66,20 @@ DESCRIPTIONS = {
 ║  • Each arm has an independent nervous system            ║
 ╚══════════════════════════════════════════════════════════╝
 """,
-    "SHRIMP": """
-╔══════════════════════════════════════════════════════════╗
-║                       🦐  SHRIMP                         ║
-╠══════════════════════════════════════════════════════════╣
-║  Diet: Omnivore — algae, plankton, organic debris        ║
-║                                                          ║
-║  Special abilities:                                      ║
-║  • Mantis shrimp can punch at 80 km/h, generating        ║
-║    a shockwave that stuns or kills prey                  ║
-║  • Has 16 types of photoreceptors (humans have 3)        ║
-║  • Some species are bioluminescent                       ║
-║  • Cleaner shrimp remove parasites from larger fish      ║
-╚══════════════════════════════════════════════════════════╝
-""",
-    "TUNA": """
-╔══════════════════════════════════════════════════════════╗
-║                         🐟  TUNA                         ║
-╠══════════════════════════════════════════════════════════╣
-║  Diet: Carnivore — fish, squid, crustaceans              ║
-║                                                          ║
-║  Special abilities:                                      ║
-║  • One of the fastest fish: up to 70 km/h                ║
-║  • Warm-blooded: maintains body temperature above        ║
-║    surrounding water for better muscle performance       ║
-║  • Migrates thousands of kilometres across oceans        ║
-╚══════════════════════════════════════════════════════════╝
-""",
 }
 
 WELCOME_MSG = """
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║        🐠  Welcome to the Marine Wildlife Museum  🐠     ║
+║        🐠  Welcome to the Marine Wildlife Museum  🐠    ║
 ║                                                          ║
-║   I am your guide robot. Here is what you can ask me:    ║
+║   I am your guide robot. Here is what you can ask me:   ║
 ║                                                          ║
 ║   • Say a destination to navigate there:                 ║
-║     SHARK, WHALE, DOLPHIN, CORAL, TURTLE,                ║
-║     OCTOPUS, JELLYFISH, TUNA, HOME                       ║
+║     SHARK, TURTLE, OCTOPUS, HOME                         ║
 ║                                                          ║
-║   • Say FOLLOW for a full guided tour                    ║
 ║   • Say STOP to cancel any movement                      ║
-║   • Say FORWARD / BACK / LEFT / RIGHT to move manually   ║
+║   • Say GO / BACK / LEFT / RIGHT to move manually        ║
 ║   • Say FASTER / SLOWER to adjust speed                  ║
 ║                                                          ║
 ║              Enjoy your visit !                          ║
@@ -185,26 +112,23 @@ class VoiceNavMuseum:
         print("[System] move_base ready.")
 
         # --- Robot state ---
-        self.linear_speed  = LINEAR_SPEED
-        self.angular_speed = ANGULAR_SPEED
+        self.linear_speed   = LINEAR_SPEED
+        self.angular_speed  = ANGULAR_SPEED
         self.target_linear  = 0.0
         self.target_angular = 0.0
         self.last_cmd_time  = time.time()
         self.is_stopped     = True
         self.navigating     = False
-        self.follow_active  = False
         self.twist_msg      = Twist()
 
         rospy.on_shutdown(self.cleanup)
-
         print(WELCOME_MSG)
 
     # -----------------------------------------------------------------------
-    # Navigation helpers
+    # Navigation
     # -----------------------------------------------------------------------
 
     def _send_goal(self, point_key):
-        """Build and send a MoveBaseGoal. Blocks until result. Returns state."""
         if point_key not in self.points:
             print(f"[Nav] Unknown point: {point_key}")
             return None
@@ -223,15 +147,18 @@ class VoiceNavMuseum:
         return self.nav_client.get_state()
 
     def navigate_to(self, point_key):
-        """Navigate to a single point in a background thread."""
         def _nav():
             self.navigating = True
             print(f"[Nav] Navigating to {point_key}...")
             state = self._send_goal(point_key)
             if state == actionlib.GoalStatus.SUCCEEDED:
                 print(f"[Nav] Arrived at {point_key}.")
+                # Show animal description if available
                 if point_key in DESCRIPTIONS:
                     print(DESCRIPTIONS[point_key])
+                # Show welcome message if at WELCOME point
+                if point_key == "WELCOME":
+                    print(WELCOME_MSG)
             else:
                 print(f"[Nav] Navigation to {point_key} failed or was cancelled.")
             self.navigating = False
@@ -240,70 +167,22 @@ class VoiceNavMuseum:
         t.start()
 
     def cancel_navigation(self):
-        """Cancel any active goal."""
-        if self.navigating or self.follow_active:
+        if self.navigating:
             self.nav_client.cancel_all_goals()
-            self.navigating    = False
-            self.follow_active = False
+            self.navigating = False
             print("[Nav] Navigation cancelled.")
-
-    def follow_tour(self):
-        """Full guided tour in a background thread."""
-        def _tour():
-            self.follow_active = True
-            self.navigating    = True
-            print("\n[Tour] Starting full guided tour...")
-
-            for point_key in TOUR_ORDER:
-                # Check if cancelled between stops
-                if not self.follow_active:
-                    print("[Tour] Tour cancelled.")
-                    self.navigating = False
-                    return
-
-                if point_key == "HOME":
-                    print(f"[Tour] Navigating to {point_key}...")
-                    state = self._send_goal(point_key)
-                    if state == actionlib.GoalStatus.SUCCEEDED:
-                        if point_key == TOUR_ORDER[-1]:
-                            print("[Tour] Tour complete. Back at HOME.")
-                        else:
-                            print(f"[Tour] At {point_key}.")
-                    else:
-                        print(f"[Tour] Could not reach {point_key}. Stopping tour.")
-                        break
-                else:
-                    if not self.follow_active:
-                        break
-                    print(f"[Tour] Navigating to {point_key}...")
-                    state = self._send_goal(point_key)
-                    if state != actionlib.GoalStatus.SUCCEEDED:
-                        print(f"[Tour] Could not reach {point_key}. Stopping tour.")
-                        break
-
-                    # Display description and wait
-                    if point_key in DESCRIPTIONS:
-                        print(DESCRIPTIONS[point_key])
-                    print(f"[Tour] Waiting {int(FOLLOW_WAIT)}s for visitors to read...")
-                    # Interruptible wait
-                    for _ in range(int(FOLLOW_WAIT * 10)):
-                        if not self.follow_active:
-                            break
-                        time.sleep(0.1)
-
-            self.follow_active = False
-            self.navigating    = False
-
-        t = threading.Thread(target=_tour, daemon=True)
-        t.start()
 
     # -----------------------------------------------------------------------
     # Voice processing
     # -----------------------------------------------------------------------
 
-    def process_command(self, word):
-        """Act on a single recognised word from Pocketsphinx."""
-        print(f"[Voice] Recognised: '{word}'")
+    def process_command(self, word, score):
+        # Confidence filter
+        if score < CONFIDENCE_THR:
+            print(f"[Voice] '{word}' ignored (low confidence: {score})")
+            return
+
+        print(f"[Voice] Recognised: '{word}' (score: {score})")
 
         # STOP — always top priority
         if word == "stop":
@@ -314,49 +193,32 @@ class VoiceNavMuseum:
             print("[Command] >> STOP")
             return
 
-        # WELCOME
-        if word == "welcome":
-            print(WELCOME_MSG)
-            return
-
-        # FOLLOW — guided tour
-        if word == "follow":
-            if self.navigating or self.follow_active:
-                print("[Voice] Already navigating. Say 'stop' first.")
-                return
-            self.follow_tour()
-            return
-
         # DESTINATIONS
         dest_map = {
-            "shark":    "SHARK",
-            "whale":    "WHALE",
-            "dolphin":  "DOLPHIN",
-            "sea snail":"SEASNAIL",
-            "turtle":   "TURTLE",
-            "octopus":  "OCTOPUS",
-            "shrimp":   "SHRIMP",
-            "tuna":     "TUNA",
-            "home":     "HOME",
+            "shark":   "SHARK",
+            "turtle":  "TURTLE",
+            "octopus": "OCTOPUS",
+            "home":    "HOME",
+            "welcome": "WELCOME",
         }
         if word in dest_map:
-            if self.navigating or self.follow_active:
+            if self.navigating:
                 print("[Voice] Already navigating. Say 'stop' first.")
                 return
             self.navigate_to(dest_map[word])
             return
 
         # TELEOP — only when not navigating
-        if self.navigating or self.follow_active:
+        if self.navigating:
             print("[Voice] Teleop ignored: navigation in progress. Say 'stop' to cancel.")
             return
 
-        if word == "forward":
+        if word == "go":
             self.target_linear  =  self.linear_speed
             self.target_angular =  0.0
             self.is_stopped     =  False
             self.last_cmd_time  =  time.time()
-            print("[Command] >> FORWARD")
+            print("[Command] >> GO")
         elif word == "back":
             self.target_linear  = -self.linear_speed
             self.target_angular =  0.0
@@ -385,7 +247,6 @@ class VoiceNavMuseum:
             print(f"[Command] >> SLOWER (linear={self.linear_speed:.2f} m/s)")
 
     def voice_listener_loop(self):
-        """Background thread: Pocketsphinx LiveSpeech loop."""
         speech = LiveSpeech(
             lm=False,
             jsgf=GRAMMAR_FILE,
@@ -394,9 +255,10 @@ class VoiceNavMuseum:
         for phrase in speech:
             if rospy.is_shutdown():
                 break
-            word = str(phrase).strip().lower()
+            word  = str(phrase).strip().lower()
+            score = phrase.score()
             if word:
-                self.process_command(word)
+                self.process_command(word, score)
 
     # -----------------------------------------------------------------------
     # Main loop
@@ -409,9 +271,7 @@ class VoiceNavMuseum:
         rate = rospy.Rate(10)
 
         while not rospy.is_shutdown():
-            # Safety timeout: stop teleop if silent for too long
             if (not self.navigating
-                    and not self.follow_active
                     and not self.is_stopped
                     and time.time() - self.last_cmd_time > CMD_TIMEOUT):
                 print(f"[Safety] No command for {CMD_TIMEOUT}s. Stopping.")
@@ -419,8 +279,7 @@ class VoiceNavMuseum:
                 self.target_angular = 0.0
                 self.is_stopped     = True
 
-            # Publish velocity only during manual teleop
-            if not self.navigating and not self.follow_active:
+            if not self.navigating:
                 self.twist_msg.linear.x  = self.target_linear
                 self.twist_msg.angular.z = self.target_angular
                 self.vel_pub.publish(self.twist_msg)
