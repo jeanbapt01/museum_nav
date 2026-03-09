@@ -1,0 +1,3 @@
+#JSGF V1.0;
+grammar museum;
+public <command> = shark | whale | dolphin | sea snail | turtle | octopus | shrimp | tuna | forward | back | left | right | stop | home | follow | faster | slower | welcome;
