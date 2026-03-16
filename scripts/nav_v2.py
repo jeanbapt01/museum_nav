@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""
+light_nav_v2.py — Museum robot navigation
+Changes vs v1:
+  - Push-to-listen: press ENTER to toggle voice recognition on/off
+  - Gamepad support via ROS /joy topic (PS3 / DualShock 3):
+      Buttons  → navigate to destinations
+      L-stick  → forward / backward
+      R-stick  → rotate left / right
+"""
 
 import rospy
 import threading
@@ -9,6 +18,7 @@ import yaml
 import actionlib
 from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from sensor_msgs.msg import Joy
 from pocketsphinx import LiveSpeech
 
 # ---------------------------------------------------------------------------
@@ -17,11 +27,41 @@ from pocketsphinx import LiveSpeech
 LINEAR_SPEED   = 0.15   # m/s
 ANGULAR_SPEED  = 0.5    # rad/s
 CMD_TIMEOUT    = 8.0    # seconds before teleop auto-stop
-CONFIDENCE_THR = -3000  # log-prob threshold — ignore recognition below this
+CONFIDENCE_THR = -6000  # log-prob threshold
 
-POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/pointsv1.yaml")
+POINTS_FILE  = os.path.expanduser("~/catkin_ws/src/museum_nav/config/pointsv2.yaml")
 GRAMMAR_FILE = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.gram")
 DICT_FILE    = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.dict")
+
+# ---------------------------------------------------------------------------
+# PS3 CONTROLLER MAPPING
+#
+#  Verify with: rostopic echo /joy
+#
+#  axes[0]  : L-stick X  (left +1, right -1)
+#  axes[1]  : L-stick Y  (up   +1, down  -1)  → forward / backward
+#  axes[2]  : R-stick X  (left +1, right -1)  → rotation
+#  axes[3]  : R-stick Y
+#
+#  buttons[12] : Triangle  → SHARK
+#  buttons[14] : Cross     → TURTLE
+#  buttons[13] : Circle    → OCTOPUS
+#  buttons[15] : Square    → HOME
+#  buttons[3]  : Start     → WELCOME
+#  buttons[4]  : Select    → STOP
+# ---------------------------------------------------------------------------
+AXIS_LINEAR   = 1    # L-stick Y
+AXIS_ANGULAR  = 2    # R-stick X
+AXIS_DEADZONE = 0.15
+
+BUTTON_DEST = {
+    1: "SHARK",
+    4: "TURTLE",
+    3: "OCTOPUS",
+    10: "HOME",
+     0: "WELCOME",
+}
+BUTTON_STOP = 11   # Select
 
 # ---------------------------------------------------------------------------
 # DESCRIPTIONS
@@ -73,16 +113,18 @@ WELCOME_MSG = """
 ║                                                          ║
 ║        🐠  Welcome to the Marine Wildlife Museum  🐠    ║
 ║                                                          ║
-║   I am your guide robot. Here is what you can ask me:   ║
+║   VOICE  (press ENTER to toggle 🎙️ / 🔇):               ║
+║     SHARK / TURTLE / OCTOPUS / HOME / WELCOME            ║
+║     STOP • GO • BACK • LEFT • RIGHT                      ║
+║     FASTER / SLOWER                                      ║
 ║                                                          ║
-║   • Say a destination to navigate there:                 ║
-║     SHARK, TURTLE, OCTOPUS, HOME                         ║
+║   GAMEPAD (PS3):                                         ║
+║     Triangle → SHARK      Cross   → TURTLE               ║
+║     Circle   → OCTOPUS    Square  → HOME                 ║
+║     Start    → WELCOME    Select  → STOP                 ║
+║     L-stick  → Forward / Backward                        ║
+║     R-stick  → Rotate Left / Right                       ║
 ║                                                          ║
-║   • Say STOP to cancel any movement                      ║
-║   • Say GO / BACK / LEFT / RIGHT to move manually        ║
-║   • Say FASTER / SLOWER to adjust speed                  ║
-║                                                          ║
-║              Enjoy your visit !                          ║
 ╚══════════════════════════════════════════════════════════╝
 """
 
@@ -100,7 +142,7 @@ class VoiceNavMuseum:
             with open(POINTS_FILE, "r") as f:
                 self.points = yaml.safe_load(f)
         except IOError:
-            print("[Error] Cannot find points.yaml")
+            print("[Error] Cannot find points yaml file")
             sys.exit(1)
         print(f"[System] Loaded waypoints: {list(self.points.keys())}")
 
@@ -121,8 +163,23 @@ class VoiceNavMuseum:
         self.navigating     = False
         self.twist_msg      = Twist()
 
+        # --- Voice toggle ---
+        self.voice_active   = False
+        self._voice_lock    = threading.Lock()
+
+        # --- Gamepad stick state ---
+        self._stick_linear  = 0.0
+        self._stick_angular = 0.0
+
+        # --- Previous button states (detect rising edge, not hold) ---
+        self._prev_buttons  = []
+
+        # --- /joy subscriber ---
+        rospy.Subscriber('/joy', Joy, self._joy_callback)
+
         rospy.on_shutdown(self.cleanup)
         print(WELCOME_MSG)
+        print("[Voice] Listening is OFF — press ENTER to toggle.")
 
     # -----------------------------------------------------------------------
     # Navigation
@@ -153,18 +210,15 @@ class VoiceNavMuseum:
             state = self._send_goal(point_key)
             if state == actionlib.GoalStatus.SUCCEEDED:
                 print(f"[Nav] Arrived at {point_key}.")
-                # Show animal description if available
                 if point_key in DESCRIPTIONS:
                     print(DESCRIPTIONS[point_key])
-                # Show welcome message if at WELCOME point
                 if point_key == "WELCOME":
                     print(WELCOME_MSG)
             else:
                 print(f"[Nav] Navigation to {point_key} failed or was cancelled.")
             self.navigating = False
 
-        t = threading.Thread(target=_nav, daemon=True)
-        t.start()
+        threading.Thread(target=_nav, daemon=True).start()
 
     def cancel_navigation(self):
         if self.navigating:
@@ -173,18 +227,46 @@ class VoiceNavMuseum:
             print("[Nav] Navigation cancelled.")
 
     # -----------------------------------------------------------------------
-    # Voice processing
+    # Gamepad — /joy callback
     # -----------------------------------------------------------------------
 
-    def process_command(self, word, score):
-        # Confidence filter
-        if score < CONFIDENCE_THR:
+    def _joy_callback(self, msg):
+        axes    = msg.axes
+        buttons = msg.buttons
+
+        # --- Sticks (continuous) ---
+        lin = axes[AXIS_LINEAR]  if len(axes) > AXIS_LINEAR  else 0.0
+        ang = axes[AXIS_ANGULAR] if len(axes) > AXIS_ANGULAR else 0.0
+        self._stick_linear  = lin if abs(lin) > AXIS_DEADZONE else 0.0
+        self._stick_angular = ang if abs(ang) > AXIS_DEADZONE else 0.0
+
+        # --- Buttons (detect rising edge only) ---
+        if not self._prev_buttons:
+            self._prev_buttons = list(buttons)
+            return
+
+        for idx, (prev, curr) in enumerate(zip(self._prev_buttons, buttons)):
+            if prev == 0 and curr == 1:
+                if idx == BUTTON_STOP:
+                    self.process_command("stop", source="gamepad")
+                elif idx in BUTTON_DEST:
+                    self.process_command(BUTTON_DEST[idx].lower(), source="gamepad")
+
+        self._prev_buttons = list(buttons)
+
+    # -----------------------------------------------------------------------
+    # Command dispatcher (shared by voice + gamepad)
+    # -----------------------------------------------------------------------
+
+    def process_command(self, word, score=0, source="voice"):
+        if source == "voice" and score < CONFIDENCE_THR:
             print(f"[Voice] '{word}' ignored (low confidence: {score})")
             return
 
-        print(f"[Voice] Recognised: '{word}' (score: {score})")
+        print(f"[{source.upper()}] Command: '{word}'" +
+              (f" (score: {score})" if source == "voice" else ""))
 
-        # STOP — always top priority
+        # STOP
         if word == "stop":
             self.cancel_navigation()
             self.target_linear  = 0.0
@@ -203,76 +285,88 @@ class VoiceNavMuseum:
         }
         if word in dest_map:
             if self.navigating:
-                print("[Voice] Already navigating. Say 'stop' first.")
+                print(f"[{source.upper()}] Already navigating — STOP first.")
                 return
             self.navigate_to(dest_map[word])
             return
 
-        # TELEOP — only when not navigating
-        if self.navigating:
-            print("[Voice] Teleop ignored: navigation in progress. Say 'stop' to cancel.")
-            return
+        # VOICE TELEOP
+        if source == "voice":
+            if self.navigating:
+                print("[Voice] Teleop ignored: navigation in progress.")
+                return
+            if word == "go":
+                self.target_linear, self.target_angular = self.linear_speed, 0.0
+                self.is_stopped = False; self.last_cmd_time = time.time()
+                print("[Command] >> GO")
+            elif word == "back":
+                self.target_linear, self.target_angular = -self.linear_speed, 0.0
+                self.is_stopped = False; self.last_cmd_time = time.time()
+                print("[Command] >> BACK")
+            elif word == "left":
+                self.target_linear, self.target_angular = 0.0, self.angular_speed
+                self.is_stopped = False; self.last_cmd_time = time.time()
+                print("[Command] >> LEFT")
+            elif word == "right":
+                self.target_linear, self.target_angular = 0.0, -self.angular_speed
+                self.is_stopped = False; self.last_cmd_time = time.time()
+                print("[Command] >> RIGHT")
+            elif word == "faster":
+                self.linear_speed  = min(self.linear_speed  + 0.03, 0.22)
+                self.angular_speed = min(self.angular_speed + 0.1,  2.0)
+                print(f"[Command] >> FASTER (linear={self.linear_speed:.2f} m/s)")
+            elif word == "slower":
+                self.linear_speed  = max(self.linear_speed  - 0.03, 0.05)
+                self.angular_speed = max(self.angular_speed - 0.1,  0.2)
+                print(f"[Command] >> SLOWER (linear={self.linear_speed:.2f} m/s)")
 
-        if word == "go":
-            self.target_linear  =  self.linear_speed
-            self.target_angular =  0.0
-            self.is_stopped     =  False
-            self.last_cmd_time  =  time.time()
-            print("[Command] >> GO")
-        elif word == "back":
-            self.target_linear  = -self.linear_speed
-            self.target_angular =  0.0
-            self.is_stopped     =  False
-            self.last_cmd_time  =  time.time()
-            print("[Command] >> BACK")
-        elif word == "left":
-            self.target_linear  =  0.0
-            self.target_angular =  self.angular_speed
-            self.is_stopped     =  False
-            self.last_cmd_time  =  time.time()
-            print("[Command] >> LEFT")
-        elif word == "right":
-            self.target_linear  =  0.0
-            self.target_angular = -self.angular_speed
-            self.is_stopped     =  False
-            self.last_cmd_time  =  time.time()
-            print("[Command] >> RIGHT")
-        elif word == "faster":
-            self.linear_speed  = min(self.linear_speed  + 0.03, 0.22)
-            self.angular_speed = min(self.angular_speed + 0.1,  2.0)
-            print(f"[Command] >> FASTER (linear={self.linear_speed:.2f} m/s)")
-        elif word == "slower":
-            self.linear_speed  = max(self.linear_speed  - 0.03, 0.05)
-            self.angular_speed = max(self.angular_speed - 0.1,  0.2)
-            print(f"[Command] >> SLOWER (linear={self.linear_speed:.2f} m/s)")
+    # -----------------------------------------------------------------------
+    # Voice — ENTER toggles listening
+    # -----------------------------------------------------------------------
+
+    def keyboard_toggle_loop(self):
+        while not rospy.is_shutdown():
+            try:
+                input()
+            except EOFError:
+                time.sleep(0.5)
+                continue
+            with self._voice_lock:
+                self.voice_active = not self.voice_active
+                state = "ON  🎙️" if self.voice_active else "OFF 🔇"
+                print(f"[Voice] Listening {state}")
 
     def voice_listener_loop(self):
-        speech = LiveSpeech(
-            lm=False,
-            jsgf=GRAMMAR_FILE,
-            dic=DICT_FILE,
-        )
+        speech = LiveSpeech(lm=False, jsgf=GRAMMAR_FILE, dic=DICT_FILE)
         for phrase in speech:
             if rospy.is_shutdown():
                 break
+            with self._voice_lock:
+                active = self.voice_active
+            if not active:
+                continue
             word  = str(phrase).strip().lower()
             score = phrase.score()
             if word:
-                self.process_command(word, score)
+                self.process_command(word, score, source="voice")
 
     # -----------------------------------------------------------------------
     # Main loop
     # -----------------------------------------------------------------------
 
     def run(self):
-        voice_thread = threading.Thread(target=self.voice_listener_loop, daemon=True)
-        voice_thread.start()
+        threading.Thread(target=self.keyboard_toggle_loop, daemon=True).start()
+        threading.Thread(target=self.voice_listener_loop,  daemon=True).start()
 
         rate = rospy.Rate(10)
 
         while not rospy.is_shutdown():
+            gamepad_moving = (self._stick_linear != 0.0 or self._stick_angular != 0.0)
+
+            # Safety auto-stop for voice teleop
             if (not self.navigating
                     and not self.is_stopped
+                    and not gamepad_moving
                     and time.time() - self.last_cmd_time > CMD_TIMEOUT):
                 print(f"[Safety] No command for {CMD_TIMEOUT}s. Stopping.")
                 self.target_linear  = 0.0
@@ -280,8 +374,14 @@ class VoiceNavMuseum:
                 self.is_stopped     = True
 
             if not self.navigating:
-                self.twist_msg.linear.x  = self.target_linear
-                self.twist_msg.angular.z = self.target_angular
+                if gamepad_moving:
+                    # Sticks have priority over voice teleop
+                    self.twist_msg.linear.x  = self._stick_linear  * self.linear_speed
+                    self.twist_msg.angular.z = self._stick_angular * self.angular_speed
+                    self.last_cmd_time       = time.time()
+                else:
+                    self.twist_msg.linear.x  = self.target_linear
+                    self.twist_msg.angular.z = self.target_angular
                 self.vel_pub.publish(self.twist_msg)
 
             rate.sleep()
