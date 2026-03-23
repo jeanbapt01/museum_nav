@@ -69,7 +69,7 @@ BUTTON_STOP = 10   # Select
 DESCRIPTIONS = {
     "SHARK": """
 ╔══════════════════════════════════════════════════════════╗
-║                        🦈  SHARK                        ║
+║                        🦈  SHARK                         ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — fish, seals, cephalopods              ║
 ║                                                          ║
@@ -82,7 +82,7 @@ DESCRIPTIONS = {
 """,
     "TURTLE": """
 ╔══════════════════════════════════════════════════════════╗
-║                    🐢  SEA TURTLE                       ║
+║                    🐢  SEA TURTLE                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Omnivore — jellyfish, seagrass, crustaceans       ║
 ║                                                          ║
@@ -95,7 +95,7 @@ DESCRIPTIONS = {
 """,
     "OCTOPUS": """
 ╔══════════════════════════════════════════════════════════╗
-║                      🐙  OCTOPUS                        ║
+║                      🐙  OCTOPUS                         ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Diet: Carnivore — crabs, molluscs, small fish           ║
 ║                                                          ║
@@ -111,9 +111,9 @@ DESCRIPTIONS = {
 WELCOME_MSG = """
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║        🐠  Welcome to the Marine Wildlife Museum  🐠    ║
+║        🐠  Welcome to the Marine Wildlife Museum  🐠     ║
 ║                                                          ║
-║   VOICE  (press ENTER to toggle 🎙️ / 🔇):               ║
+║   VOICE  (press ENTER to toggle 🎙️ / 🔇):                ║
 ║     SHARK / TURTLE / OCTOPUS / HOME / WELCOME            ║
 ║     STOP • GO • BACK • LEFT • RIGHT                      ║
 ║     FASTER / SLOWER                                      ║
