@@ -43,8 +43,8 @@ DICT_FILE    = os.path.expanduser("~/catkin_ws/src/museum_nav/speech/museum.dict
 #  axes[2]  : R-stick X  (left +1, right -1)  → rotation
 #  axes[3]  : R-stick Y
 #
-#  buttons[12] : Triangle  → SHARK
-#  buttons[14] : Cross     → TURTLE
+#  buttons[12] : Triangle  → TURTLE
+#  buttons[14] : Cross     → SHARK
 #  buttons[13] : Circle    → OCTOPUS
 #  buttons[15] : Square    → HOME
 #  buttons[3]  : Start     → WELCOME
@@ -55,13 +55,13 @@ AXIS_ANGULAR  = 2    # R-stick X
 AXIS_DEADZONE = 0.15
 
 BUTTON_DEST = {
-    1: "SHARK",
+    0: "SHARK",
     4: "TURTLE",
-    3: "OCTOPUS",
-    10: "HOME",
-     0: "WELCOME",
+    1: "OCTOPUS",
+    3: "HOME",
+     11: "WELCOME",
 }
-BUTTON_STOP = 11   # Select
+BUTTON_STOP = 10   # Select
 
 # ---------------------------------------------------------------------------
 # DESCRIPTIONS
