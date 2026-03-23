@@ -1,9 +1,20 @@
 <launch>
-  <param name="use_sim_time" value="false"/>
 
-  <node pkg="map_server" type="map_server" name="map_server" args="$(find museum_nav)/maps/map.yaml"/>
+  <!-- Map argument — change it at launch time:
+       roslaunch museum_nav museum_start.launch map:=mapx
+       roslaunch museum_nav museum_start.launch map:=map2
+       Default is mapx if no argument is given.                -->
+  <arg name="map" default="mapx"/>
 
-  <include file="$(find turtlebot3_navigation)/launch/move_base.launch"/>
+  <!-- Navigation stack + carte -->
+  <include file="$(find turtlebot3_navigation)/launch/turtlebot3_navigation.launch">
+    <arg name="map_file" value="$(find museum_nav)/maps/$(arg map).yaml"/>
+  </include>
 
-  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+  <!-- Nœud joy (manette PS3) -->
+  <node name="joy_node" pkg="joy" type="joy_node" output="screen"/>
+
+  <!-- Nœud de navigation museum -->
+  <node name="museum_nav" pkg="museum_nav" type="light_nav_v2.py" output="screen" launch-prefix="xterm -e"/>
+
 </launch>
